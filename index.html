@@ -1,0 +1,1755 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Santa Tracker — North Pole Tracking Network</title>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+    margin:0;
+    overflow:hidden;
+    background:#02070b;
+    color:white;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+#scene{
+    position:fixed;
+    inset:0;
+}
+
+.panel{
+    position:fixed;
+    z-index:10;
+    background:rgba(3,12,18,.88);
+    border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 0 25px rgba(0,0,0,.5);
+    backdrop-filter:blur(8px);
+}
+
+#topBar{
+    left:0;
+    right:0;
+    top:0;
+    height:66px;
+    padding:0 22px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.logo{
+    font-size:16px;
+    font-weight:bold;
+    letter-spacing:1px;
+}
+
+.logo span{
+    display:block;
+    color:#9baab1;
+    font-size:10px;
+    letter-spacing:2px;
+    margin-top:4px;
+}
+
+.online{
+    color:#43e879;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.online:before{
+    content:"";
+    display:inline-block;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#43e879;
+    box-shadow:0 0 10px #43e879;
+    margin-right:7px;
+}
+
+#leftPanel{
+    left:16px;
+    top:86px;
+    width:265px;
+    padding:15px;
+}
+
+#rightPanel{
+    right:16px;
+    top:86px;
+    width:265px;
+    padding:15px;
+}
+
+.panelTitle{
+    color:#aab8bf;
+    font-size:10px;
+    letter-spacing:2px;
+    border-bottom:1px solid rgba(255,255,255,.13);
+    padding-bottom:9px;
+    margin-bottom:12px;
+}
+
+.dataRow{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    margin:9px 0;
+    font-size:12px;
+}
+
+.label{
+    color:#8c9ba3;
+}
+
+.value{
+    text-align:right;
+    font-weight:bold;
+}
+
+.green{color:#43e879}
+.yellow{color:#ffd55e}
+.red{color:#ff4545}
+
+.bigLocation{
+    font-size:18px;
+    font-weight:bold;
+    margin:6px 0 16px;
+}
+
+.signal{
+    color:#43e879;
+    letter-spacing:2px;
+}
+
+button{
+    width:100%;
+    margin-top:9px;
+    padding:11px;
+    color:white;
+    background:#111e25;
+    border:1px solid rgba(255,255,255,.18);
+    cursor:pointer;
+    font-weight:bold;
+}
+
+button:hover{
+    background:#20313a;
+}
+
+#startBtn{
+    background:#a91414;
+}
+
+#startBtn.active{
+    background:#087b39;
+}
+
+#modelStatus{
+    color:#ffd55e;
+    font-size:12px;
+    margin-bottom:13px;
+}
+
+#arrivalCountdown{
+    font-size:27px;
+    font-weight:bold;
+}
+
+#pulseText{
+    color:#ff4c4c;
+    font-size:10px;
+}
+
+#bottomBar{
+    position:fixed;
+    z-index:10;
+    bottom:0;
+    left:0;
+    right:0;
+    height:34px;
+    display:flex;
+    align-items:center;
+    justify-content:space-around;
+    background:rgba(2,8,12,.94);
+    border-top:1px solid rgba(255,255,255,.15);
+    color:#9ba9af;
+    font-size:10px;
+}
+
+#modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:30;
+    background:rgba(0,0,0,.7);
+    align-items:center;
+    justify-content:center;
+}
+
+.modalBox{
+    width:340px;
+    padding:20px;
+    background:#08141b;
+    border:1px solid rgba(255,255,255,.25);
+}
+
+.modalBox h2{
+    margin-top:0;
+}
+
+select,input{
+    width:100%;
+    padding:10px;
+    margin:7px 0 13px;
+    background:#101e25;
+    color:white;
+    border:1px solid #40515a;
+}
+
+.close{
+    background:#333;
+}
+</style>
+</head>
+
+<body>
+
+<div id="scene"></div>
+
+<div id="topBar" class="panel">
+    <div class="logo">
+        🎅 SANTA TRACKER
+        <span>NORTH POLE TRACKING NETWORK</span>
+    </div>
+
+    <div class="online">
+        TRACKING SYSTEM ONLINE
+    </div>
+</div>
+
+<div id="leftPanel" class="panel">
+
+    <div class="panelTitle">
+        CURRENT TRACKING DATA
+    </div>
+
+    <div class="dataRow">
+        <span class="label">LOCATION</span>
+        <span class="value" id="locationText">NORTH POLE</span>
+    </div>
+
+    <div class="dataRow">
+        <span class="label">DESTINATION</span>
+        <span class="value" id="destinationText">STANDING BY</span>
+    </div>
+
+    <div class="dataRow">
+        <span class="label">SPEED</span>
+        <span class="value">1,850 MPH</span>
+    </div>
+
+    <div class="dataRow">
+        <span class="label">ALTITUDE</span>
+        <span class="value">32,000 FT</span>
+    </div>
+
+    <div class="dataRow">
+        <span class="label">REINDEER</span>
+        <span class="value green">9 DETECTED</span>
+    </div>
+
+    <div class="dataRow">
+        <span class="label">TIME ZONE</span>
+        <span class="value" id="timezoneText">UTC</span>
+    </div>
+
+    <div class="dataRow">
+        <span class="label">FLIGHT STATUS</span>
+        <span class="value green" id="flightStatus">
+            STANDING BY
+        </span>
+    </div>
+
+    <br>
+
+    <div class="panelTitle">
+        TRACKING NETWORK
+    </div>
+
+    <div class="dataRow">
+        <span class="label">SATELLITES</span>
+        <span class="value green">24 CONNECTED</span>
+    </div>
+
+    <div class="dataRow">
+        <span class="label">CELL TOWERS</span>
+        <span class="value green">300+ ACTIVE</span>
+    </div>
+
+    <div class="dataRow">
+        <span class="label">RADIO SIGNAL</span>
+        <span class="value signal">▮▮▮▮▮</span>
+    </div>
+
+    <div class="dataRow">
+        <span class="label">TRACKING LINK</span>
+        <span class="value green">ACTIVE</span>
+    </div>
+
+    <button id="startBtn">
+        START TRACKING
+    </button>
+
+    <button id="stopBtn">
+        STOP TRACKING
+    </button>
+
+    <button id="settingsBtn">
+        PARENT SETTINGS
+    </button>
+
+</div>
+
+<div id="rightPanel" class="panel">
+
+    <div class="panelTitle">
+        SANTA TRACKING
+    </div>
+
+    <div id="modelStatus">
+        🛷 Loading Santa's sleigh...
+    </div>
+
+    <div class="bigLocation" id="activeLocation">
+        NORTH POLE
+    </div>
+
+    <div class="dataRow">
+        <span class="label">NEXT STOP</span>
+        <span class="value" id="nextStop">—</span>
+    </div>
+
+    <div class="dataRow">
+        <span class="label">ROUTE</span>
+        <span class="value" id="routeNumber">1 / 50</span>
+    </div>
+
+    <div class="dataRow">
+        <span class="label">STOP TIME</span>
+        <span class="value green">3 MINUTES</span>
+    </div>
+
+    <div class="panelTitle" style="margin-top:18px">
+        LOCATION SIGNAL
+    </div>
+
+    <div id="pulseText">
+        ● BEATING LOCATION PIN
+    </div>
+
+    <div class="panelTitle" style="margin-top:18px">
+        NEXT ARRIVAL
+    </div>
+
+    <div id="arrivalCountdown">
+        --:--
+    </div>
+
+    <div class="dataRow">
+        <span class="label">HOME LOCATION</span>
+        <span class="value" id="homeLocation">
+            NOT SET
+        </span>
+    </div>
+
+</div>
+
+<div id="bottomBar">
+    <span>SYSTEM: ONLINE</span>
+    <span>TRACKING: <b class="green">ACTIVE</b></span>
+    <span>LAST SIGNAL: NOW</span>
+    <span>UTC</span>
+    <span id="musicButton" style="cursor:pointer">
+        🎵 MUSIC
+    </span>
+</div>
+
+<div id="modal">
+
+    <div class="modalBox">
+
+        <h2>🎅 Parent Settings</h2>
+
+        <label>Home State</label>
+
+        <select id="stateSelect">
+            <option value="">Select State</option>
+            <option>Alabama</option>
+            <option>Alaska</option>
+            <option>Arizona</option>
+            <option>Arkansas</option>
+            <option>California</option>
+            <option>Colorado</option>
+            <option>Connecticut</option>
+            <option>Delaware</option>
+            <option>Florida</option>
+            <option>Georgia</option>
+            <option>Hawaii</option>
+            <option>Idaho</option>
+            <option>Illinois</option>
+            <option>Indiana</option>
+            <option>Iowa</option>
+            <option>Kansas</option>
+            <option>Kentucky</option>
+            <option>Louisiana</option>
+            <option>Maine</option>
+            <option>Maryland</option>
+            <option>Massachusetts</option>
+            <option>Michigan</option>
+            <option>Minnesota</option>
+            <option>Mississippi</option>
+            <option>Missouri</option>
+            <option>Montana</option>
+            <option>Nebraska</option>
+            <option>Nevada</option>
+            <option>New Hampshire</option>
+            <option>New Jersey</option>
+            <option>New Mexico</option>
+            <option>New York</option>
+            <option>North Carolina</option>
+            <option>North Dakota</option>
+            <option>Ohio</option>
+            <option>Oklahoma</option>
+            <option>Oregon</option>
+            <option>Pennsylvania</option>
+            <option>Rhode Island</option>
+            <option>South Carolina</option>
+            <option>South Dakota</option>
+            <option>Tennessee</option>
+            <option>Texas</option>
+            <option>Utah</option>
+            <option>Vermont</option>
+            <option>Virginia</option>
+            <option>Washington</option>
+            <option>West Virginia</option>
+            <option>Wisconsin</option>
+            <option>Wyoming</option>
+        </select>
+
+        <label>Home Location</label>
+
+        <input id="homeInput" placeholder="Example: Atlanta">
+
+        <button id="saveSettings">
+            SAVE SETTINGS
+        </button>
+
+        <button class="close" id="closeSettings">
+            CLOSE
+        </button>
+
+    </div>
+</div>
+
+<audio id="music" loop>
+    <source
+        src="pulsebox-jazz-christmas-432315.mp3"
+        type="audio/mpeg">
+</audio>
+
+<script>
+
+/* =====================================================
+   ROUTE
+   ===================================================== */
+
+const route = [
+
+    {name:"North Pole",lat:89.9,lng:0,zone:"UTC"},
+
+    {name:"Tokyo",lat:35.6762,lng:139.6503,zone:"UTC+9"},
+    {name:"Seoul",lat:37.5665,lng:126.9780,zone:"UTC+9"},
+    {name:"Beijing",lat:39.9042,lng:116.4074,zone:"UTC+8"},
+    {name:"Singapore",lat:1.3521,lng:103.8198,zone:"UTC+8"},
+    {name:"Sydney",lat:-33.8688,lng:151.2093,zone:"UTC+10"},
+    {name:"New Delhi",lat:28.6139,lng:77.2090,zone:"UTC+5:30"},
+    {name:"Dubai",lat:25.2048,lng:55.2708,zone:"UTC+4"},
+    {name:"Cairo",lat:30.0444,lng:31.2357,zone:"UTC+2"},
+    {name:"Johannesburg",lat:-26.2041,lng:28.0473,zone:"UTC+2"},
+    {name:"Paris",lat:48.8566,lng:2.3522,zone:"UTC+1"},
+    {name:"London",lat:51.5074,lng:-.1278,zone:"UTC"},
+    {name:"Reykjavik",lat:64.1466,lng:-21.9426,zone:"UTC"},
+    {name:"Rio de Janeiro",lat:-22.9068,lng:-43.1729,zone:"UTC-3"},
+    {name:"Buenos Aires",lat:-34.6037,lng:-58.3816,zone:"UTC-3"},
+    {name:"Santiago",lat:-33.4489,lng:-70.6693,zone:"UTC-4"},
+    {name:"Santo Domingo",lat:18.4861,lng:-69.9312,zone:"UTC-4"},
+    {name:"Puerto Rico",lat:18.2208,lng:-66.5901,zone:"UTC-4"},
+    {name:"Havana",lat:23.1136,lng:-82.3666,zone:"UTC-5"},
+    {name:"Panama City",lat:8.9824,lng:-79.5199,zone:"UTC-5"},
+    {name:"Bogota",lat:4.7110,lng:-74.0721,zone:"UTC-5"},
+    {name:"Lima",lat:-12.0464,lng:-77.0428,zone:"UTC-5"},
+    {name:"Mexico City",lat:19.4326,lng:-99.1332,zone:"UTC-6"},
+    {name:"Denver",lat:39.7392,lng:-104.9903,zone:"UTC-7"},
+    {name:"Los Angeles",lat:34.0522,lng:-118.2437,zone:"UTC-8"},
+    {name:"Atlanta",lat:33.7490,lng:-84.3880,zone:"UTC-5"},
+    {name:"Miami",lat:25.7617,lng:-80.1918,zone:"UTC-5"},
+    {name:"New York",lat:40.7128,lng:-74.0060,zone:"UTC-5"},
+    {name:"Boston",lat:42.3601,lng:-71.0589,zone:"UTC-5"},
+    {name:"Washington DC",lat:38.9072,lng:-77.0369,zone:"UTC-5"},
+    {name:"Philadelphia",lat:39.9526,lng:-75.1652,zone:"UTC-5"},
+    {name:"Detroit",lat:42.3314,lng:-83.0458,zone:"UTC-5"},
+    {name:"Columbus",lat:39.9612,lng:-82.9988,zone:"UTC-5"},
+    {name:"Charlotte",lat:35.2271,lng:-80.8431,zone:"UTC-5"},
+    {name:"Chicago",lat:41.8781,lng:-87.6298,zone:"UTC-6"},
+    {name:"Nashville",lat:36.1627,lng:-86.7816,zone:"UTC-6"},
+    {name:"Dallas",lat:32.7767,lng:-96.7970,zone:"UTC-6"},
+    {name:"New Orleans",lat:29.9511,lng:-90.0715,zone:"UTC-6"},
+    {name:"Minneapolis",lat:44.9778,lng:-93.2650,zone:"UTC-6"},
+    {name:"Oklahoma City",lat:35.4676,lng:-97.5164,zone:"UTC-6"},
+    {name:"Phoenix",lat:33.4484,lng:-112.0740,zone:"UTC-7"},
+    {name:"Salt Lake City",lat:40.7608,lng:-111.8910,zone:"UTC-7"},
+    {name:"Albuquerque",lat:35.0844,lng:-106.6504,zone:"UTC-7"},
+    {name:"Las Vegas",lat:36.1699,lng:-115.1398,zone:"UTC-8"},
+    {name:"Seattle",lat:47.6062,lng:-122.3321,zone:"UTC-8"},
+    {name:"Portland",lat:45.5152,lng:-122.6784,zone:"UTC-8"},
+    {name:"San Francisco",lat:37.7749,lng:-122.4194,zone:"UTC-8"},
+    {name:"Anchorage",lat:61.2181,lng:-149.9003,zone:"UTC-9"},
+    {name:"Honolulu",lat:21.3069,lng:-157.8583,zone:"UTC-10"}
+
+];
+
+
+/* =====================================================
+   THREE
+   ===================================================== */
+
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(
+    45,
+    window.innerWidth / window.innerHeight,
+    .01,
+    1000
+);
+
+camera.position.set(0,4.8,6.8);
+
+const renderer = new THREE.WebGLRenderer({
+    antialias:true
+});
+
+renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+);
+
+renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio,2)
+);
+
+renderer.setClearColor(0x02070b);
+
+document.getElementById("scene")
+    .appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(
+    camera,
+    renderer.domElement
+);
+
+controls.enableDamping = true;
+controls.dampingFactor = .07;
+controls.minDistance = 1.25;
+controls.maxDistance = 11;
+
+
+/* =====================================================
+   LIGHT
+   ===================================================== */
+
+scene.add(
+    new THREE.AmbientLight(
+        0xffffff,
+        1.25
+    )
+);
+
+const sun = new THREE.DirectionalLight(
+    0xffffff,
+    2
+);
+
+sun.position.set(5,4,5);
+
+scene.add(sun);
+
+
+/* =====================================================
+   EARTH
+   ===================================================== */
+
+const EARTH_RADIUS = 2;
+
+const earthTexture =
+    new THREE.TextureLoader().load(
+        "https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg"
+    );
+
+const earth = new THREE.Mesh(
+    new THREE.SphereGeometry(
+        EARTH_RADIUS,
+        64,
+        64
+    ),
+    new THREE.MeshPhongMaterial({
+        map:earthTexture,
+        shininess:8
+    })
+);
+
+scene.add(earth);
+
+
+/* =====================================================
+   ATMOSPHERE
+   ===================================================== */
+
+const atmosphere = new THREE.Mesh(
+    new THREE.SphereGeometry(
+        EARTH_RADIUS * 1.015,
+        48,
+        48
+    ),
+    new THREE.MeshBasicMaterial({
+        color:0x438fc4,
+        transparent:true,
+        opacity:.10,
+        side:THREE.BackSide
+    })
+);
+
+scene.add(atmosphere);
+
+
+/* =====================================================
+   COORDINATES
+   ===================================================== */
+
+function latLngToVector3(lat,lng,radius){
+
+    const phi =
+        (90-lat) * Math.PI / 180;
+
+    const theta =
+        (lng+180) * Math.PI / 180;
+
+    return new THREE.Vector3(
+
+        -radius *
+        Math.sin(phi) *
+        Math.cos(theta),
+
+        radius *
+        Math.cos(phi),
+
+        radius *
+        Math.sin(phi) *
+        Math.sin(theta)
+
+    );
+}
+
+
+/* =====================================================
+   LABELS
+   ===================================================== */
+
+const labelGroup = new THREE.Group();
+
+scene.add(labelGroup);
+
+function createLabel(text,location){
+
+    const canvas =
+        document.createElement("canvas");
+
+    canvas.width = 512;
+    canvas.height = 128;
+
+    const ctx =
+        canvas.getContext("2d");
+
+    ctx.font = "bold 34px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.lineWidth = 9;
+    ctx.strokeStyle = "rgba(0,0,0,.9)";
+
+    ctx.strokeText(
+        text,
+        256,
+        64
+    );
+
+    ctx.fillStyle = "white";
+
+    ctx.fillText(
+        text,
+        256,
+        64
+    );
+
+    const texture =
+        new THREE.CanvasTexture(canvas);
+
+    const material =
+        new THREE.SpriteMaterial({
+            map:texture,
+            transparent:true,
+            depthTest:true,
+            depthWrite:false
+        });
+
+    const sprite =
+        new THREE.Sprite(material);
+
+    sprite.position.copy(
+        latLngToVector3(
+            location.lat,
+            location.lng,
+            EARTH_RADIUS+.045
+        )
+    );
+
+    sprite.scale.set(.30,.075,1);
+
+    labelGroup.add(sprite);
+}
+
+route.forEach(function(location){
+    createLabel(location.name,location);
+});
+
+
+/* =====================================================
+   RED LOCATION MARKER
+   ===================================================== */
+
+const heartbeat = new THREE.Group();
+
+scene.add(heartbeat);
+
+const outerPulse = new THREE.Mesh(
+    new THREE.RingGeometry(.035,.065,32),
+    new THREE.MeshBasicMaterial({
+        color:0xff2020,
+        transparent:true,
+        opacity:.8,
+        side:THREE.DoubleSide
+    })
+);
+
+const middlePulse = new THREE.Mesh(
+    new THREE.RingGeometry(.018,.035,32),
+    new THREE.MeshBasicMaterial({
+        color:0xff4040,
+        transparent:true,
+        opacity:1,
+        side:THREE.DoubleSide
+    })
+);
+
+const centerPulse = new THREE.Mesh(
+    new THREE.CircleGeometry(.018,24),
+    new THREE.MeshBasicMaterial({
+        color:0xff1010,
+        side:THREE.DoubleSide
+    })
+);
+
+heartbeat.add(
+    outerPulse,
+    middlePulse,
+    centerPulse
+);
+
+
+/*
+   🔴 IMPORTANT:
+   The marker is calculated from
+   Santa's geographic position.
+
+   Santa's rotation is NEVER used
+   to calculate the marker.
+*/
+
+function moveHeartbeat(position){
+
+    const earthNormal =
+        position.clone().normalize();
+
+    const groundPosition =
+        earthNormal.clone()
+            .multiplyScalar(
+                EARTH_RADIUS + .012
+            );
+
+    heartbeat.position.copy(
+        groundPosition
+    );
+
+    heartbeat.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0,0,1),
+        earthNormal
+    );
+}
+
+
+/* =====================================================
+   SANTA MODEL
+   ===================================================== */
+
+let santa = null;
+
+const MODEL_FILE =
+    "santa_-_norad_santa_tracker.glb";
+
+const gltfLoader =
+    new THREE.GLTFLoader();
+
+gltfLoader.load(
+    MODEL_FILE,
+
+    function(gltf){
+
+        santa = gltf.scene;
+
+        const box =
+            new THREE.Box3()
+                .setFromObject(santa);
+
+        const size =
+            box.getSize(
+                new THREE.Vector3()
+            );
+
+        const largest =
+            Math.max(
+                size.x,
+                size.y,
+                size.z
+            );
+
+        santa.scale.setScalar(
+            .12 / largest
+        );
+
+        const centered =
+            new THREE.Box3()
+                .setFromObject(santa);
+
+        const center =
+            centered.getCenter(
+                new THREE.Vector3()
+            );
+
+        santa.position.sub(center);
+
+        santa.rotation.order = "YXZ";
+
+        santa.rotation.y =
+            -Math.PI / 2;
+
+        santa.traverse(function(object){
+
+            if(object.isMesh){
+
+                object.visible = true;
+                object.frustumCulled = false;
+
+            }
+
+        });
+
+        scene.add(santa);
+
+        const start =
+            latLngToVector3(
+                route[0].lat,
+                route[0].lng,
+                EARTH_RADIUS+.16
+            );
+
+        santa.position.copy(start);
+
+        moveHeartbeat(start);
+
+        document.getElementById(
+            "modelStatus"
+        ).textContent =
+            "🛷 SANTA SLEIGH ONLINE";
+
+        document.getElementById(
+            "modelStatus"
+        ).style.color =
+            "#43e879";
+    },
+
+    function(xhr){
+
+        if(xhr.total){
+
+            const percent =
+                Math.round(
+                    xhr.loaded /
+                    xhr.total *
+                    100
+                );
+
+            document.getElementById(
+                "modelStatus"
+            ).textContent =
+                "🛷 Loading Santa... " +
+                percent +
+                "%";
+        }
+    },
+
+    function(error){
+
+        console.error(
+            "Santa GLB error:",
+            error
+        );
+
+        document.getElementById(
+            "modelStatus"
+        ).textContent =
+            "⚠ SANTA MODEL FAILED TO LOAD";
+
+        document.getElementById(
+            "modelStatus"
+        ).style.color =
+            "#ff4545";
+    }
+);
+
+
+/* =====================================================
+   FLIGHT SETTINGS
+   ===================================================== */
+
+let tracking = false;
+let currentSegment = 0;
+let segmentStartTime = 0;
+let arrivalStartTime = 0;
+let traveling = true;
+let cameraArrivalZoom = false;
+
+const TRAVEL_DURATION = 45000;
+const STOP_DURATION = 3 * 60 * 1000;
+
+
+/* =====================================================
+   ROUTE POSITION
+   ===================================================== */
+
+function getRoutePosition(index,progress){
+
+    const current =
+        route[index];
+
+    const next =
+        route[
+            Math.min(
+                index+1,
+                route.length-1
+            )
+        ];
+
+    const a =
+        latLngToVector3(
+            current.lat,
+            current.lng,
+            EARTH_RADIUS+.16
+        );
+
+    const b =
+        latLngToVector3(
+            next.lat,
+            next.lng,
+            EARTH_RADIUS+.16
+        );
+
+    const angle =
+        a.angleTo(b);
+
+    if(angle < .0001){
+        return a.clone();
+    }
+
+    const sinAngle =
+        Math.sin(angle);
+
+    const p1 =
+        Math.sin(
+            (1-progress)*angle
+        ) / sinAngle;
+
+    const p2 =
+        Math.sin(
+            progress*angle
+        ) / sinAngle;
+
+    return a.clone()
+        .multiplyScalar(p1)
+        .add(
+            b.clone()
+                .multiplyScalar(p2)
+        )
+        .normalize()
+        .multiplyScalar(
+            EARTH_RADIUS+.16
+        );
+}
+
+
+/* =====================================================
+   SANTA FACING DIRECTION
+   ===================================================== */
+
+function pointSantaForward(position,nextPosition){
+
+    if(!santa)return;
+
+    const currentNormal =
+        position.clone().normalize();
+
+    const nextNormal =
+        nextPosition.clone().normalize();
+
+    /*
+       Tangent direction across the Earth.
+    */
+
+    let forward =
+        nextNormal.clone()
+            .sub(
+                currentNormal.clone()
+                    .multiplyScalar(
+                        currentNormal.dot(nextNormal)
+                    )
+            );
+
+    if(forward.lengthSq() < .000001){
+        return;
+    }
+
+    forward.normalize();
+
+    /*
+       Three.js lookAt makes the model's
+       -Z direction point toward the target.
+
+       Our sleigh model's original heading
+       needs a 90-degree correction.
+    */
+
+    const target =
+        position.clone()
+            .add(forward);
+
+    santa.lookAt(target);
+
+    santa.rotateY(-Math.PI/2);
+}
+
+
+/* =====================================================
+   UI
+   ===================================================== */
+
+function updateUI(){
+
+    const current =
+        route[currentSegment];
+
+    const next =
+        route[
+            Math.min(
+                currentSegment+1,
+                route.length-1
+            )
+        ];
+
+    document.getElementById(
+        "locationText"
+    ).textContent =
+        current.name.toUpperCase();
+
+    document.getElementById(
+        "activeLocation"
+    ).textContent =
+        current.name.toUpperCase();
+
+    document.getElementById(
+        "destinationText"
+    ).textContent =
+        next.name.toUpperCase();
+
+    document.getElementById(
+        "nextStop"
+    ).textContent =
+        next.name;
+
+    document.getElementById(
+        "timezoneText"
+    ).textContent =
+        current.zone;
+
+    document.getElementById(
+        "routeNumber"
+    ).textContent =
+        Math.min(
+            currentSegment+1,
+            route.length
+        ) +
+        " / " +
+        route.length;
+}
+
+
+/* =====================================================
+   ARRIVAL
+   ===================================================== */
+
+function arrive(){
+
+    traveling = false;
+
+    arrivalStartTime =
+        performance.now();
+
+    cameraArrivalZoom = true;
+
+    document.getElementById(
+        "flightStatus"
+    ).textContent =
+        "ARRIVED";
+
+    document.getElementById(
+        "flightStatus"
+    ).className =
+        "value green";
+
+    updateUI();
+}
+
+
+/* =====================================================
+   NEXT LOCATION
+   ===================================================== */
+
+function nextLocation(){
+
+    currentSegment++;
+
+    if(
+        currentSegment >=
+        route.length-1
+    ){
+
+        currentSegment = 0;
+    }
+
+    traveling = true;
+
+    segmentStartTime =
+        performance.now();
+
+    cameraArrivalZoom = false;
+
+    document.getElementById(
+        "flightStatus"
+    ).textContent =
+        "IN FLIGHT";
+
+    document.getElementById(
+        "flightStatus"
+    ).className =
+        "value yellow";
+
+    updateUI();
+
+    camera.position.set(
+        0,
+        4.8,
+        6.8
+    );
+
+    controls.target.set(
+        0,
+        0,
+        0
+    );
+}
+
+
+/* =====================================================
+   CAMERA
+   ===================================================== */
+
+function followSanta(position){
+
+    if(!santa)return;
+
+    const normal =
+        position.clone().normalize();
+
+    /*
+       Camera stays outside the globe
+       and looks toward Santa.
+    */
+
+    const desiredCamera =
+        position.clone()
+            .add(
+                normal.multiplyScalar(3.1)
+            );
+
+    camera.position.lerp(
+        desiredCamera,
+        .045
+    );
+
+    controls.target.lerp(
+        position,
+        .075
+    );
+}
+
+
+function zoomToSanta(){
+
+    if(!santa)return;
+
+    const normal =
+        santa.position.clone().normalize();
+
+    const desiredCamera =
+        santa.position.clone()
+            .add(
+                normal.multiplyScalar(.62)
+            );
+
+    camera.position.lerp(
+        desiredCamera,
+        .045
+    );
+
+    controls.target.lerp(
+        santa.position,
+        .075
+    );
+}
+
+
+/* =====================================================
+   START
+   ===================================================== */
+
+document.getElementById(
+    "startBtn"
+).onclick = function(){
+
+    if(!santa){
+
+        alert(
+            "Santa is still loading. Please wait a moment."
+        );
+
+        return;
+    }
+
+    tracking = true;
+
+    currentSegment = 0;
+
+    traveling = true;
+
+    segmentStartTime =
+        performance.now();
+
+    cameraArrivalZoom = false;
+
+    camera.position.set(
+        0,
+        4.8,
+        6.8
+    );
+
+    controls.target.set(
+        0,
+        0,
+        0
+    );
+
+    this.classList.add("active");
+
+    this.textContent =
+        "TRACKING ACTIVE";
+
+    document.getElementById(
+        "flightStatus"
+    ).textContent =
+        "IN FLIGHT";
+
+    document.getElementById(
+        "flightStatus"
+    ).className =
+        "value yellow";
+
+    updateUI();
+
+    const music =
+        document.getElementById("music");
+
+    music.volume = .25;
+
+    music.play().catch(
+        function(){}
+    );
+};
+
+
+/* =====================================================
+   STOP
+   ===================================================== */
+
+document.getElementById(
+    "stopBtn"
+).onclick = function(){
+
+    tracking = false;
+
+    cameraArrivalZoom = false;
+
+    document.getElementById(
+        "startBtn"
+    ).classList.remove("active");
+
+    document.getElementById(
+        "startBtn"
+    ).textContent =
+        "START TRACKING";
+
+    document.getElementById(
+        "flightStatus"
+    ).textContent =
+        "STANDING BY";
+
+    document.getElementById(
+        "flightStatus"
+    ).className =
+        "value green";
+};
+
+
+/* =====================================================
+   MUSIC
+   ===================================================== */
+
+document.getElementById(
+    "musicButton"
+).onclick = function(){
+
+    const music =
+        document.getElementById("music");
+
+    if(music.paused){
+
+        music.volume = .25;
+
+        music.play().catch(
+            function(){}
+        );
+
+    }else{
+
+        music.pause();
+
+    }
+};
+
+
+/* =====================================================
+   SETTINGS
+   ===================================================== */
+
+const modal =
+    document.getElementById("modal");
+
+document.getElementById(
+    "settingsBtn"
+).onclick = function(){
+
+    modal.style.display = "flex";
+};
+
+document.getElementById(
+    "closeSettings"
+).onclick = function(){
+
+    modal.style.display = "none";
+};
+
+document.getElementById(
+    "saveSettings"
+).onclick = function(){
+
+    const state =
+        document.getElementById(
+            "stateSelect"
+        ).value;
+
+    const home =
+        document.getElementById(
+            "homeInput"
+        ).value;
+
+    localStorage.setItem(
+        "santaParentSettings",
+
+        JSON.stringify({
+            state:state,
+            home:home
+        })
+    );
+
+    document.getElementById(
+        "homeLocation"
+    ).textContent =
+        home ||
+        state ||
+        "NOT SET";
+
+    modal.style.display = "none";
+};
+
+
+try{
+
+    const saved =
+        JSON.parse(
+            localStorage.getItem(
+                "santaParentSettings"
+            )
+        );
+
+    if(saved){
+
+        document.getElementById(
+            "stateSelect"
+        ).value =
+            saved.state || "";
+
+        document.getElementById(
+            "homeInput"
+        ).value =
+            saved.home || "";
+
+        document.getElementById(
+            "homeLocation"
+        ).textContent =
+            saved.home ||
+            saved.state ||
+            "NOT SET";
+    }
+
+}catch(error){}
+
+
+/* =====================================================
+   ANIMATION
+   ===================================================== */
+
+function animate(){
+
+    requestAnimationFrame(animate);
+
+    const now =
+        performance.now();
+
+
+    /* HEARTBEAT */
+
+    const heartbeatTime =
+        (now % 1200) / 1200;
+
+    const pulse =
+        Math.sin(
+            heartbeatTime *
+            Math.PI *
+            2
+        ) * .5 + .5;
+
+    const outerScale =
+        .65 + pulse * 2;
+
+    outerPulse.scale.set(
+        outerScale,
+        outerScale,
+        outerScale
+    );
+
+    outerPulse.material.opacity =
+        .75 - pulse * .6;
+
+    const middleScale =
+        .8 + pulse * .7;
+
+    middlePulse.scale.set(
+        middleScale,
+        middleScale,
+        middleScale
+    );
+
+    middlePulse.material.opacity =
+        .95 - pulse * .3;
+
+
+    /* SANTA */
+
+    if(tracking && santa){
+
+        if(traveling){
+
+            const elapsed =
+                now -
+                segmentStartTime;
+
+            const progress =
+                Math.min(
+                    elapsed /
+                    TRAVEL_DURATION,
+                    1
+                );
+
+            const position =
+                getRoutePosition(
+                    currentSegment,
+                    progress
+                );
+
+
+            /* SANTA LOCATION */
+
+            santa.position.copy(
+                position
+            );
+
+
+            /*
+               🔴 RED MARKER
+               EXACT SAME GEOGRAPHIC POSITION
+            */
+
+            moveHeartbeat(
+                position
+            );
+
+
+            /*
+               🧭 GET THE NEXT POINT
+               AND TURN SANTA TOWARD IT
+            */
+
+            const nextPosition =
+                getRoutePosition(
+                    currentSegment,
+                    Math.min(
+                        progress+.01,
+                        1
+                    )
+                );
+
+            pointSantaForward(
+                position,
+                nextPosition
+            );
+
+
+            /*
+               📷 FOLLOW SANTA
+            */
+
+            followSanta(
+                position
+            );
+
+
+            if(progress >= 1){
+
+                const finalPosition =
+                    getRoutePosition(
+                        currentSegment,
+                        1
+                    );
+
+                santa.position.copy(
+                    finalPosition
+                );
+
+                moveHeartbeat(
+                    finalPosition
+                );
+
+                arrive();
+            }
+
+
+        }else{
+
+            /*
+               SANTA IS STOPPED
+            */
+
+            const location =
+                getRoutePosition(
+                    currentSegment,
+                    1
+                );
+
+            santa.position.copy(
+                location
+            );
+
+            moveHeartbeat(
+                location
+            );
+
+
+            /*
+               Keep Santa facing toward
+               the NEXT destination.
+            */
+
+            if(
+                currentSegment <
+                route.length-1
+            ){
+
+                const nextLocationPosition =
+                    getRoutePosition(
+                        currentSegment+1,
+                        0
+                    );
+
+                pointSantaForward(
+                    location,
+                    nextLocationPosition
+                );
+            }
+
+
+            const elapsed =
+                now -
+                arrivalStartTime;
+
+            const remaining =
+                Math.max(
+                    0,
+                    STOP_DURATION-elapsed
+                );
+
+            const minutes =
+                Math.floor(
+                    remaining / 60000
+                );
+
+            const seconds =
+                Math.floor(
+                    (remaining % 60000) / 1000
+                );
+
+            document.getElementById(
+                "arrivalCountdown"
+            ).textContent =
+                minutes +
+                ":" +
+                String(seconds)
+                    .padStart(2,"0");
+
+
+            if(cameraArrivalZoom){
+
+                zoomToSanta();
+            }
+
+
+            if(
+                elapsed >=
+                STOP_DURATION
+            ){
+
+                nextLocation();
+            }
+        }
+    }
+
+
+    controls.update();
+
+    renderer.render(
+        scene,
+        camera
+    );
+}
+
+animate();
+
+
+/* =====================================================
+   RESIZE
+   ===================================================== */
+
+window.addEventListener(
+    "resize",
+    function(){
+
+        camera.aspect =
+            window.innerWidth /
+            window.innerHeight;
+
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(
+            window.innerWidth,
+            window.innerHeight
+        );
+    }
+);
+
+
+/* INITIAL */
+
+updateUI();
+
+</script>
+
+</body>
+</html>
+```
